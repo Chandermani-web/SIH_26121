@@ -14,6 +14,17 @@ import { ertmacSimulator } from '../services/simulatorService.js';
 
 export const apiRouter = Router();
 
+// Health check endpoint on /api/health
+apiRouter.get('/health', (_req: Request, res: Response) => {
+  return res.json({
+    status: 'HEALTHY',
+    service: 'eRTMAC-NWIS REST API',
+    organization: 'Oil India Limited (OIL)',
+    phase: 'PHASE 1: Project Foundation & Spatial Intelligence',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Store dynamic uploaded documents in memory
 const documentsStore: TechnicalDocument[] = [...TECHNICAL_DOCUMENTS_DATA];
 

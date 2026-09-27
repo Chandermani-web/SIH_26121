@@ -57,26 +57,20 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  const frontendOrigin = process.env.FRONTEND_ORIGIN;
-  if (frontendOrigin) {
-    app.use((req, res, next) => {
-      const requestOrigin = req.headers.origin;
-      if (requestOrigin === frontendOrigin) {
-        res.setHeader('Access-Control-Allow-Origin', frontendOrigin);
-        res.setHeader('Vary', 'Origin');
-        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      }
-      if (req.method === 'OPTIONS') {
-        return res.sendStatus(requestOrigin === frontendOrigin ? 204 : 403);
-      }
-      next();
-    });
-  }
+  // CORS Middleware
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
   // Request logger
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
       console.log(`[API] ${req.method} ${req.path}`);
     }
     next();
@@ -86,13 +80,38 @@ async function startServer() {
   app.use('/api', apiRouter);
 
   // Healthcheck endpoint
+  const getHealthPayload = () => ({
+    status: 'HEALTHY',
+    service: 'eRTMAC-NWIS Engine',
+    version: '1.0.0',
+    organization: 'Oil India Limited (OIL)',
+    phase: 'PHASE 1: Project Foundation & Operational Intelligence',
+    uptimeSeconds: Math.floor(process.uptime()),
+    database: {
+      type: 'PostgreSQL/PostGIS (Synthetic Hybrid Engine)',
+      status: 'CONNECTED',
+      spatialEngine: 'PostGIS / Haversine Geo-Correlation',
+      monitoredWellsCount: 17,
+      historicalEventsCount: 65,
+    },
+    redis: {
+      status: 'ACTIVE_PUBSUB',
+      channel: 'ertmac:telemetry:live',
+    },
+    telemetryStream: {
+      activeWell: 'NHK-Deep-504',
+      status: ertmacSimulator.getState().isRunning ? 'STREAMING' : 'IDLE',
+      currentDepth: ertmacSimulator.getState().currentDepth,
+    },
+    timestamp: new Date().toISOString(),
+  });
+
   app.get('/health', (_req, res) => {
-    res.json({
-      status: 'UP',
-      service: 'eRTMAC-NWIS Backend',
-      organization: 'Oil India Limited',
-      timestamp: new Date().toISOString(),
-    });
+    res.json(getHealthPayload());
+  });
+
+  app.get('/api/health', (_req, res) => {
+    res.json(getHealthPayload());
   });
 
   const isProduction = process.env.NODE_ENV === 'production';

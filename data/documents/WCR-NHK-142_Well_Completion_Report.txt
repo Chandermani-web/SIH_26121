@@ -1,0 +1,66 @@
+OIL INDIA LIMITED
+WELL COMPLETION REPORT (WCR)
+WELL: NHK-142 | FIELD: NAHORKATIYA | BLOCK: CENTRAL MINING LEASE
+SPUD DATE: 14-MAR-2021 | COMPLETION DATE: 08-JUN-2021
+TOTAL DEPTH (MD): 3280.0 M | TRUE VERTICAL DEPTH (TVD): 3274.2 M
+RIG: BHEL 1400 HP | OPERATOR: OIL INDIA LIMITED, DULIAJAN, ASSAM
+
+================================================================================
+SECTION 1: GEOLOGICAL & STRATIGRAPHIC SUMMARY
+================================================================================
+The well NHK-142 was drilled as a development well in the south-central block of
+Nahorkatiya Field to evaluate and produce from the Barail Main Sand reservoir.
+
+Stratigraphic tops encountered:
+- Alluvium / Surface: 0 - 450 m
+- Dihing Formation: 450 - 1080 m
+- Tipam Sandstone: 1080 - 2080 m
+- Girujan Clay: 2080 - 2530 m
+- Barail Coal-Shale: 2530 - 2795 m
+- Barail Main Sand: 2795 - 3210 m
+- Kopili Formation: 3210 - 3280 m (TD)
+
+================================================================================
+SECTION 2: DRILLING INCIDENT REPORT — MUD LOSS AT 2845 METERS (PAGE 42)
+================================================================================
+Date: 18-APR-2021 | Depth: 2845.0 m MD | Bit: 8-1/2" PDC (Smith MSi616)
+Formation: Barail Main Sand (Depleted Upper Sand Lobe)
+Mud Weight: 10.2 ppg | Viscosity: 48 sec/qt | Flow Rate: 560 gpm | SPP: 2420 psi
+
+INCIDENT NARRATIVE:
+At 14:20 hrs, while drilling ahead at 2845.0m with 18 klb WOB and 120 RPM, the driller
+observed an immediate reduction in flow line returns from 100% to 0% in approximately
+12 minutes. The active pit volume dropped by 68 bbls before pumps were shut down.
+Total loss of circulation was confirmed.
+
+ROOT CAUSE ANALYSIS:
+1. Formation Pressure Depletion: The Barail Main Sand in this fault block has undergone
+   reservoir pressure depletion due to decades of oil production, resulting in an
+   equivalent pore pressure gradient of approximately 8.2 - 8.4 ppg.
+2. Hydrostatic Overbalance: The active drilling fluid weight of 10.2 ppg generated a
+   differential pressure in excess of 420 psi against the formation matrix.
+3. Natural Micro-Fractures: Intersected natural tectonic fractures near the top of the
+   sand package, which readily opened under the dynamic Equivalent Circulating Density
+   (ECD = 10.7 ppg).
+
+MITIGATION & REMEDIAL ACTIONS:
+1. Pulled drill bit 3 stands off bottom (to 2760m) inside the 9-5/8" casing shoe to prevent
+   differential pipe sticking while circulation was lost.
+2. Mixed and spotted a 45-bbl high-fluid-loss engineered LCM squeeze pill composed of:
+   - 25 ppb Coarse Calcium Carbonate (CaCO3)
+   - 15 ppb Medium Flake Mica
+   - 5 ppb Fine Walnut Shells
+   - Carrier: 10.0 ppg Bentonite-polymer slurry with crosslinked starch
+3. Displaced pill to bit with 110 bbls of base mud; hesitated squeeze with 300 psi
+   surface squeeze pressure for 45 minutes until pressure held steady.
+4. Tripped back to bottom carefully with no fill tagged. Resumed circulation at reduced
+   flow rate (480 gpm). Returns established 100%.
+5. Trimmed system mud weight down from 10.2 ppg to 9.85 ppg using water dilution and
+   centrifuging to minimize downhole differential pressure.
+
+LESSONS LEARNED & RECOMMENDATIONS FOR OFFSET WELLS:
+- Nearby future wells drilling into the Barail horizon in Nahorkatiya (e.g. NHK-Deep-504)
+  must maintain dynamic ECD below 10.4 ppg.
+- Pre-treat active system with 10-15 ppb fine CaCO3 bridging agent prior to penetrating
+  the Barail sand top at ~2840-2850m.
+- Keep 50 bbls of prepared LCM pill readily available in reserve tank #2.

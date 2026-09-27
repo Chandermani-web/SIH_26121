@@ -1,0 +1,9 @@
+measured_depth_m,tvd_m,formation,rop_m_hr,wob_klb,rpm,torque_kft_lb,spp_psi,flow_in_gpm,flow_out_gpm,mud_weight_ppg,pit_volume_bbl,loss_rate_bbl_hr
+2835.0,2830.2,Barail Main Sand,7.8,20.5,120,15.2,2400,560,560,10.2,450.0,0.0
+2838.0,2833.1,Barail Main Sand,8.1,21.0,120,15.5,2410,560,560,10.2,450.0,0.0
+2840.0,2835.0,Barail Main Sand,8.6,22.0,122,17.2,2420,560,555,10.2,449.0,5.0
+2842.0,2837.0,Barail Main Sand,11.2,22.5,125,21.0,2430,560,540,10.2,446.0,20.0
+2844.0,2839.0,Barail Main Sand,14.5,23.0,125,23.5,2410,560,490,10.2,435.0,70.0
+2845.0,2840.0,Barail Main Sand,15.8,18.0,110,24.8,2350,560,0,10.2,382.0,340.0
+2845.2,2840.2,Barail Main Sand,0.0,0.0,0,0.0,0,0,0,10.2,382.0,0.0
+2845.5,2840.4,Barail Main Sand,4.2,16.0,100,16.0,2300,480,480,9.85,420.0,0.0

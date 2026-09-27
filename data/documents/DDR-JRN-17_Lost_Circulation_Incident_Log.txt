@@ -1,0 +1,26 @@
+OIL INDIA LIMITED — DRILLING INCIDENT INVESTIGATION LOG
+REPORT NO: OIL-LOG-2019-118 | WELL: JRN-17 | FIELD: JORAJAN
+DATE: 08-DEC-2019 | DEPTH: 2848.0 M | FORMATION: BARAIL MAIN SAND
+RIG: IDECO E-1700 | CASING SHOE: 9-5/8" AT 2680 M
+
+================================================================================
+INCIDENT DESCRIPTION: TOTAL LOST CIRCULATION ACROSS FAULT ZONE
+================================================================================
+While drilling ahead at 2848m MD in Barail sandstone, rapid mud losses commenced
+at an initial rate of 40 bbls/hour, escalating within 15 minutes to complete loss
+(>110 bbls/hour). The drilling fluid level dropped below rotary table to approximately
+85 meters depth.
+
+GEOLOGICAL CONTEXT:
+Seismic interpretation re-evaluation revealed an unmapped secondary fault splay
+running sub-parallel to the main Jorajan South Fault, creating high-aperture fracture
+conduits connected to regional thief zones.
+
+MITIGATION STRATEGY:
+1. Stage 1: Pumped 45 bbl heavy fiber LCM pill (nut plug, cedar bark, mica). Pill failed
+   to bridge fractures; losses continued unabated.
+2. Stage 2: Mixed two successive 50-bbl Bentonite-Diesel-Oil (DOB) gunk plugs.
+   Upon encountering formation brine/water downhole, the DOB plug flashed into a thick
+   rubber-like gel, effectively sealing large fractures.
+3. Stage 3: Followed with 40 bbls fiber-flake sealant. Left shut in for 6 hours.
+4. Returns restored 100% at 350 gpm circulating rate. Drilling proceeded cautiously.

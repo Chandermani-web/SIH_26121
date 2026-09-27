@@ -1,0 +1,19 @@
+OIL INDIA LIMITED — GEOMECHANICS & STRATIGRAPHIC RISK ATLAS
+REGION: UPPER ASSAM FORELAND BASIN (NAHORKATIYA - MORAN - JORAJAN CORRIDOR)
+DOCUMENT ID: OIL-GEO-ASSAM-2024-V2 | COMPILATION: SUBSURFACE GEOLOGY GROUP, DULIAJAN
+
+1. REGIONAL STRESS REGIME:
+- Maximum Horizontal Stress (SHmax) azimuth: N15°E - N30°E (compressional tectonic regime).
+- Minimum Horizontal Stress (Shmin) gradient: 0.68 - 0.74 psi/ft (equivalent to 13.1 - 14.2 ppg).
+- Overburden Stress (Sv) gradient: 1.00 psi/ft (equivalent to 19.2 ppg).
+
+2. CRITICAL FORMATION DRILLING HAZARDS:
+- TIPAM SANDSTONE (1100m - 2100m): Normal pressure (8.4 - 8.6 ppg). High permeability, minor seepage.
+- GIRUJAN CLAY (2100m - 2550m): Reactive smectite-illite clays. Prone to bit balling and tight hole
+  if mud filtrate salinity is < 4% KCl.
+- BARAIL COAL-SHALE (2550m - 2800m): Cleated coal seams interbedded with hard carbonaceous shales.
+  Causes severe PDC cutter chipping and torsional resonance (stick-slip).
+- BARAIL MAIN SAND (2800m - 3200m): High-permeability reservoir sandstones. Sub-hydrostatic pore
+  pressures (8.2 - 9.0 ppg) in mature fields. Primary hazard: LOST CIRCULATION and DIFFERENTIAL STICKING.
+- KOPILI FORMATION (3200m - 3600m): Overpressured shale sequence (pore pressure gradient up to 10.4 - 11.2 ppg).
+  High risk of wellbore collapse and gas kicks if mud weight is insufficient.

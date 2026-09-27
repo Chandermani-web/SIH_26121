@@ -1,7 +1,8 @@
 # eRTMAC-NWIS — Nearby Wells Intelligence System
-### Smart India Hackathon (SIH) | Problem Statement ID: 26121
+### Smart India Hackathon (SIH)
 **Organization:** Oil India Limited (OIL)  
-**System Classification:** Real-Time AI-Powered Drilling Decision Support System
+**System Classification:** Real-Time AI-Powered Drilling Decision Support System  
+**Current Phase:** PHASE 1 — Project Foundation & Spatial Intelligence
 
 ---
 
@@ -20,241 +21,115 @@ During high-cost, high-risk drilling operations in complex geological environmen
 
 ---
 
-## 2. System Architecture
+## 2. Directory Structure
 
 ```
-                             +-------------------------------+
-                             |    Operations Web Dashboard   |
-                             | (React + TypeScript + Leaflet)|
-                             +---------------+---------------+
-                                             |
-                                   HTTP REST / WebSocket
-                                             |
-                                             v
-                             +-------------------------------+
-                             |    FastAPI / Express Server   |
-                             |   (eRTMAC Telemetry Engine)   |
-                             +---------------+---------------+
-                                             |
-                 +---------------------------+---------------------------+
-                 |                           |                           |
-                 v                           v                           v
-     +-----------------------+   +-----------------------+   +-----------------------+
-     |  Nearby Well Engine   |   |   Predictive Risk     |   |   Evidence RAG Engine |
-     | (Haversine & Stratum) |   | (Telemetry & Hazards) |   | (Chunks & Citations)  |
-     +-----------+-----------+   +-----------+-----------+   +-----------+-----------+
-                 |                           |                           |
-                 +---------------------------+---------------------------+
-                                             |
-                                             v
-                             +-------------------------------+
-                             |  PostgreSQL / PostGIS Data    |
-                             |  65+ Incidents · 16 Wells     |
-                             |  WCR/DDR Knowledge Chunks     |
-                             +---------------+---------------+
-                                             |
-                             +---------------+---------------+
-                             |       Gemini 3.8 Flash        |
-                             | (Server-Side + Safe Fallback) |
-                             +-------------------------------+
+.
+├── backend/                  # Standalone FastAPI Python service
+│   ├── app/
+│   │   ├── api/v1/           # API routers (wells, events, formations, documents, knowledge, risk, alerts, simulation)
+│   │   ├── core/             # Configuration, Database (SQLAlchemy/PostGIS), Redis client
+│   │   ├── models/           # SQLAlchemy models (Well with PostGIS Geometry, Event, Formation, Document, etc.)
+│   │   ├── schemas/          # Pydantic validation schemas
+│   │   └── main.py           # FastAPI application entrypoint with OpenAPI docs
+│   ├── alembic/              # Database migration scripts
+│   ├── Dockerfile            # Python 3.11 container build
+│   └── requirements.txt      # Python dependencies
+├── data/                     # Seed datasets & technical reports
+│   ├── documents/            # Sample synthetic WCR and DDR reports, logs, CSVs
+│   ├── formations.json       # Stratigraphic column (Alluvium to Kopili)
+│   ├── wells_seed.json       # 17 Upper Assam wells with coordinates
+│   └── events_seed.json      # 65+ historical drilling incidents
+├── docs/                     # Technical specifications
+│   ├── ARCHITECTURE.md       # Multi-tier system architecture & relevance formulas
+│   ├── API_SPECIFICATION.md  # REST API and WebSocket contract
+│   ├── DATABASE_SCHEMA.md    # PostGIS geometry ER diagram and queries
+│   └── PHASE1_FOUNDATION.md  # Phase 1 milestones and verification report
+├── frontend/                 # React frontend documentation & scripts
+├── scripts/                  # Automation & verification scripts
+│   ├── generate_demo_data.py # Generates synthetic dataset files
+│   ├── seed_database.py      # Seeds PostgreSQL/PostGIS with spatial geometries
+│   └── verify_setup.py       # Automated Phase 1 verification test suite
+├── src/                      # Full-stack React + TypeScript + Express application
+├── server.ts                 # Full-stack Node/Express server & WebSocket gateway
+├── docker-compose.yml        # Multi-service topology (PostgreSQL, Redis, FastAPI, Fullstack App)
+├── Dockerfile                # Multi-stage production build
+└── .env.example              # Environment variables template
 ```
 
 ---
 
-## 3. Key Capabilities & Implemented Modules
+## 3. Quickstart & Installation
 
-### A. Geospatial GIS Offset Well Map
-- Displays active drilling well (`NHK-Deep-504`) and 16 historical offset wells in Upper Assam fields (*Nahorkatiya, Moran, Kusijan, Jorajan, Baghjan, Digboi, Shalmari*).
-- Dynamic distance rings (2.5 km, 5.0 km, 10 km, custom radius slider 2–40 km).
-- Offset markers color-coded by **Historical Relevance Score**.
-- Interactive well popups detailing target formations, total depth, and closest incident depth offsets.
-
-### B. Well Correlation & Relevance Scoring Engine
-Calculates normalized **Historical Relevance Score (0–100%)**:
-$$\text{Relevance} = 0.30 \times \text{Spatial} + 0.30 \times \text{DepthProximity} + 0.25 \times \text{FormationMatch} + 0.15 \times \text{IncidentSeverity}$$
-Every score provides a factor breakdown explaining *why* the well is relevant (e.g. *Same formation Barail Main Sand*, *Δ 5m depth offset*, *2.3 km distance*).
-
-### C. Predictive Multi-Dimensional Risk Engine
-Evaluates 5 operational risk dimensions:
-1. **Lost Circulation / Fracturing Risk** (Barail depleted sands)
-2. **Differential Sticking & Pack-Off Risk** (Stationary string overbalance)
-3. **Well Influx / Geopressure Kick Risk** (Kopili transition overpressures)
-4. **Torsional Resonance & Stick-Slip Risk** (Interbedded coal seams)
-5. **Casing & Cementing Integrity Risk** (Slurry loss across thief zones)
-
-### D. Real-Time eRTMAC Telemetry Simulator & WebSocket Stream
-- Continuous 1-second interval surface and downhole WITS telemetry stream:
-  - Measured Depth (MD) and True Vertical Depth (TVD)
-  - Rate of Penetration (ROP, m/hr)
-  - Weight on Bit (WOB, klb) & Rotary Speed (RPM)
-  - Top Drive Torque (kft-lb) with stick-slip anomaly warnings
-  - Standpipe Pressure (SPP, psi)
-  - Active Flow In vs. Flow Out (gpm) with loss deficit monitoring
-  - Mud Weight In / Out (ppg) and Pit Volume balance (bbl)
-- Proactive alerts pushed in real-time over WebSocket (`/ws/well/{well_id}`).
-
-### E. Evidence-Grounded Knowledge Search (RAG)
-- Vectorized chunk search across technical documents:
-  - **WCR-NHK-142** (Well Completion Report, Nahorkatiya Well 142)
-  - **DDR-KNG-38** (Daily Drilling Incident Log, Kusijan Well 38)
-  - **DDR-JRN-17** (Severe Lost Circulation Report, Jorajan Well 17)
-  - **GEO-UPPER-ASSAM** (Regional Geomechanical & Pore Pressure Atlas)
-- Natural language query answering powered by **Gemini 3.8 Flash** with deterministic local oilfield engine fallback when offline.
-- Explicit page citations and ground-truth incident tables.
-
-### F. Field Mitigation Deployment Panel
-- Drilling engineers can trigger field-tested mitigation protocols:
-  - **45 bbl Engineered CaCO3 + Mica LCM Squeeze Pill** (*NHK-142 Precedent*)
-  - **50 bbl Bentonite-Diesel DOB Gunk Plug** (*JRN-17 Total Loss Precedent*)
-  - **60 bbl Safe-Solv Soaking Fluid** (*KNG-38 Differential Sticking Precedent*)
-- Instantly remediates simulated lost returns and lowers torque fluctuations.
-
----
-
-## 4. SIH Demo Presentation Scenario (One-Click Automated)
-
-Clicking the **"RUN SIH DEMO SCENARIO"** button in the header triggers the complete end-to-end hackathon workflow:
-
-1. **2838.0m — Normal Drilling:** Well `NHK-Deep-504` is rotating smoothly in Barail Main Sand with nominal torque (~14.8 kft-lb) and balanced flow (560 gpm in / 560 gpm out).
-2. **2841.0m — Pre-Hazard Signs:** Torque begins fluctuating (19–23 kft-lb) as the bit encounters micro-fractures; flow out lags flow in by 15 gpm.
-3. **2845.0m — Critical Proactive Alert Triggered:**
-   - Active pit volume begins dropping (-4.5 bbl/tick); flow deficit widens to -120 gpm.
-   - eRTMAC-NWIS matches offset well **NHK-142** (2.3 km offset) which suffered **total loss of returns (68 bbls in 12 min)** at this exact depth (2845m).
-   - High Priority Collaborative Alert pulses on screen citing *Well Completion Report NHK-142, page 42*.
-4. **Engineering Mitigation Action:**
-   - Engineer clicks **"DEPLOY LCM PILL"**.
-   - System simulates pumping 45 bbl engineered squeeze pill (25 ppb coarse CaCO3 + 15 ppb Mica).
-   - Annular returns restore to 560 gpm, mud weight is safely adjusted to 9.85 ppg, and drilling resumes.
-5. **2858m–2860m — Preventative Differential Sticking Advisory:**
-   - System flags offset well **KNG-38** (4.1 km offset) which stuck differentially at 2860m after being left stationary for 35 minutes.
-   - Advisory cautions crew to maintain string rotation (>25 RPM) during upcoming connection.
-
----
-
-## 5. Technology Stack
-
-- **Frontend:** React 19, TypeScript, Tailwind CSS, Lucide Icons, Leaflet (React GIS Map).
-- **Backend:** Express.js, TypeScript (`tsx`), Node.js, WebSocket Server (`ws`).
-- **Data Engine:** In-memory operational models matching PostgreSQL/PostGIS and pgvector schemas.
-- **AI / LLM:** Google GenAI SDK (`@google/genai` with `gemini-3.8-flash`) + Deterministic Expert Rules Engine.
-- **Deployment:** Docker, Docker Compose (`docker-compose up --build`).
-
----
-
-## 6. REST API Endpoints
-
-| Category | Method | Endpoint | Description |
-|---|---|---|---|
-| **Wells** | `GET` | `/api/wells` | List all monitored wells in Upper Assam |
-| | `GET` | `/api/wells/active` | Active drilling well status & telemetry |
-| | `GET` | `/api/wells/nearby` | Spatial query with radius & formation filters |
-| | `GET` | `/api/wells/:id` | Single well dossier, casing program, trajectory |
-| **Events** | `GET` | `/api/events` | Faceted search across 65+ historical incidents |
-| | `GET` | `/api/events/:id` | Incident investigation details, cause & remedy |
-| **Documents** | `GET` | `/api/documents` | Ingested WCR & DDR technical document list |
-| | `POST` | `/api/documents/upload` | Ingest new drilling document & create chunks |
-| **RAG** | `POST` | `/api/knowledge/search` | Evidence-grounded natural language Q&A |
-| **Risk** | `GET` | `/api/risk/current/:well_id` | Multi-dimensional risk prediction vector |
-| | `GET` | `/api/risk/history/:well_id` | Stratigraphic risk-vs-depth cross plot |
-| **Simulator** | `POST` | `/api/simulation/start` | Start eRTMAC telemetry stream / demo mode |
-| | `POST` | `/api/simulation/stop` | Pause telemetry stream |
-| | `POST` | `/api/simulation/step` | Advance bit depth by custom meter delta |
-| | `POST` | `/api/simulation/mitigate` | Deploy field-tested LCM or soaking pill |
-| **Alerts** | `GET` | `/api/alerts` | Active proactive alerts |
-| | `PATCH` | `/api/alerts/:id` | Acknowledge alert |
-| **Analytics** | `GET` | `/api/analytics/summary` | Field NPT, cost impact, and mitigation stats |
-
-**WebSocket Stream:** `ws://localhost:3000/ws/well/OIL-ACTIVE-01`
-
----
-
-## 7. Quickstart & Installation
-
-### Option 1: Local Development
+### Option 1: Docker Compose (All Services)
 ```bash
-# 1. Clone repository & install dependencies
+# 1. Build and launch all containers
+docker-compose up --build
+
+# Services started:
+# - Fullstack App:   http://localhost:3000
+# - FastAPI Backend: http://localhost:8000 (OpenAPI Docs at http://localhost:8000/docs)
+# - PostgreSQL/GIS:  localhost:5432
+# - Redis:           localhost:6379
+```
+
+### Option 2: Local Development
+```bash
+# 1. Install Node.js dependencies
 npm install
 
-# 2. Configure environment (optional Gemini API key for AI RAG)
-cp .env.example .env
+# 2. Run Phase 1 automated verification test
+python3 scripts/verify_setup.py
 
-# 3. Start full-stack development server
+# 3. Start development server
 npm run dev
 
 # 4. Open in browser:
 http://localhost:3000
 ```
 
-### Option 2: Docker Compose
-```bash
-docker-compose up --build
-```
+---
 
-### Production deployment: Vercel frontend + Node backend
+## 4. API Documentation & OpenAPI Specification
 
-Vercel should deploy the Vite frontend only. The Express process in `server.ts` owns the REST API, in-memory simulation state, and persistent WebSocket connections, so it must run on a long-lived Node host such as Docker, Railway, Render, Fly.io, or a VM. Vercel Functions are not used for this backend and must not be used for `/ws/well/:well_id`.
+- **Interactive Swagger UI:** `http://localhost:3000/docs` or `http://localhost:8000/docs`
+- **ReDoc Documentation:** `http://localhost:8000/redoc`
+- **System Healthcheck:** `GET /health` and `GET /api/health`
 
-#### Vercel project settings
+### Key Endpoints
 
-- Framework preset: `Vite`
-- Build command: `npm run build`
-- Output directory: `dist`
-- `VITE_API_BASE_URL`: the public HTTPS origin of the Node backend, with no trailing slash, for example `https://ertmac-api.example.com`
-- `VITE_WS_BASE_URL`: the public secure WebSocket origin of the same backend, with no trailing slash, for example `wss://ertmac-api.example.com`
-
-These `VITE_*` variables are read at build time. Redeploy the Vercel project after changing them. The committed `vercel.json` records the Vite build settings.
-
-#### Node backend settings
-
-Run the repository on a host that supports a persistent Node process and WebSockets:
-
-```bash
-npm ci
-npm run build
-NODE_ENV=production PORT=3000 FRONTEND_ORIGIN=https://your-app.vercel.app npm start
-```
-
-Set `FRONTEND_ORIGIN` to the exact Vercel origin without a trailing slash. It enables CORS for browser REST requests from the frontend. The backend must expose both HTTP and WebSocket traffic on the same public host and port, and must allow the upgrade path `/ws/well/OIL-ACTIVE-01`.
-
-For Docker-based hosting, `docker-compose up --build` uses the included `Dockerfile`; production infrastructure should provide the required environment values and persistent service dependencies as appropriate. The current simulator and in-memory document store remain process-local, matching the existing prototype behavior.
-
-#### Local versus production URL behavior
-
-When `VITE_API_BASE_URL` and `VITE_WS_BASE_URL` are empty or unset, the browser uses relative `/api/...` requests and the current page origin for WebSockets. This preserves `npm run dev` at `http://localhost:3000`. In the Vercel build, the two variables point the frontend at the separate Node backend.
-
-The WebSocket endpoint is supported by the selected production architecture because it runs on the separate long-lived Node backend. It is not supported by the Vercel frontend deployment itself.
-
-#### Deployment smoke test
-
-After deployment, verify:
-
-```text
-GET https://ertmac-api.example.com/health
-GET https://ertmac-api.example.com/api/wells
-GET https://ertmac-api.example.com/api/events
-GET https://ertmac-api.example.com/api/simulation/status
-GET https://ertmac-api.example.com/api/wells/nearby?radius_km=25&formation=ALL
-GET https://ertmac-api.example.com/api/wells/nearby?current_depth=2835&radius_km=25
-WebSocket wss://ertmac-api.example.com/ws/well/OIL-ACTIVE-01
-```
-
-The Vercel page should then load without API 404s, and the browser Network panel should show the WebSocket upgrade as successful.
+| Category | Method | Endpoint | Description |
+|---|---|---|---|
+| **Health** | `GET` | `/health` | System status, database & redis connections |
+| **Wells** | `GET` | `/api/wells` | List all monitored wells in Upper Assam |
+| | `GET` | `/api/wells/active` | Active drilling well status & live telemetry |
+| | `GET` | `/api/wells/nearby` | Spatial GIS proximity query with relevance score |
+| | `GET` | `/api/wells/:id` | Detailed well dossier with casing & trajectory |
+| **Events** | `GET` | `/api/events` | Search 65+ historical incidents |
+| **Formations**| `GET` | `/api/formations` | Stratigraphic column with pore & fracture gradients |
+| **Documents** | `GET` | `/api/documents` | Ingested WCR & DDR technical document list |
+| | `POST` | `/api/documents/upload` | Ingest new technical document |
+| **Knowledge** | `POST` | `/api/knowledge/search` | Evidence-grounded natural language search |
+| **Risk** | `GET` | `/api/risk/current/:well_id` | 5-dimension predictive risk matrix |
+| **Simulation**| `POST` | `/api/simulation/start` | Start eRTMAC telemetry streaming |
+| | `POST` | `/api/simulation/stop` | Pause telemetry stream |
+| | `POST` | `/api/simulation/mitigate` | Deploy field-tested LCM squeeze pill |
+| **Alerts** | `GET` | `/api/alerts` | Active proactive alerts |
+| | `PATCH` | `/api/alerts/:id` | Acknowledge alert |
 
 ---
 
-## 8. Role-Based Access Controls (RBAC)
+## 5. SIH Demonstration Workflow
 
-The header provides a role switcher simulating access levels across Oil India operations:
-- **Drilling Engineer:** Access to live telemetry, real-time WITS gauges, proactive hazard alerts, and pill deployment.
-- **Geologist:** In-depth stratigraphic formation boundaries, pore pressure profiles, and correlation matrices.
-- **Drilling Superintendent / Admin:** Rig spread oversight, NPT analytics, cost impact totals, and fleet well status.
-- **Operations Viewer:** Read-only executive dashboard monitoring field progress.
+Clicking **"RUN SIH DEMO SCENARIO"** in the top navigation activates the automated sequence:
+1. **2838m — Approach:** Well `NHK-Deep-504` drills smoothly in the Barail Main Sand.
+2. **2841m — Micro-fractures:** Flow-out deficit (-15 gpm) and torque fluctuations occur.
+3. **2845m — Critical Alert:** System matches historical well **NHK-142** (2.15 km away, total loss of 68 bbls at 2845m).
+4. **Mitigation:** Drilling engineer deploys the **45 bbl Engineered CaCO3 + Mica LCM Squeeze Pill** directly from the UI.
+5. **Recovery:** Returns restore to 560 gpm and drilling resumes safely.
 
 ---
 
-## 9. Disclaimer
+## 6. Disclaimer
 
-*All data included in this prototype has been realistically synthesized to reflect typical Upper Assam Basin geological and drilling conditions (Barail Main Sand, Girujan Clay, Tipam Sandstone). It is designed exclusively for demonstration and evaluation under Smart India Hackathon Problem Statement 26121.*
-#   S I H _ 2 6 1 2 1 
- 
- 
+*All data included in this prototype has been realistically synthesized to reflect typical Upper Assam Basin geological and drilling conditions (Barail Main Sand, Girujan Clay, Tipam Sandstone). It is designed exclusively for demonstration and evaluation under Smart India Hackathon.*

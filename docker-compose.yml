@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Full-Stack Application (React + Vite + Express Telemetry & WebSocket Gateway)
   app:
     build:
       context: .
@@ -18,6 +19,23 @@ services:
       - redis
     restart: unless-stopped
 
+  # Standalone FastAPI Python Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://oil_user:oil_secure_pass@postgres:5432/ertmac_nwis
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # PostgreSQL 15 with PostGIS Spatial Extensions
   postgres:
     image: postgis/postgis:15-3.3-alpine
     ports:
@@ -30,6 +48,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  # Redis In-Memory Telemetry Broker & Cache
   redis:
     image: redis:7-alpine
     ports:
