@@ -190,6 +190,56 @@ http://localhost:3000
 docker-compose up --build
 ```
 
+### Production deployment: Vercel frontend + Node backend
+
+Vercel should deploy the Vite frontend only. The Express process in `server.ts` owns the REST API, in-memory simulation state, and persistent WebSocket connections, so it must run on a long-lived Node host such as Docker, Railway, Render, Fly.io, or a VM. Vercel Functions are not used for this backend and must not be used for `/ws/well/:well_id`.
+
+#### Vercel project settings
+
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Output directory: `dist`
+- `VITE_API_BASE_URL`: the public HTTPS origin of the Node backend, with no trailing slash, for example `https://ertmac-api.example.com`
+- `VITE_WS_BASE_URL`: the public secure WebSocket origin of the same backend, with no trailing slash, for example `wss://ertmac-api.example.com`
+
+These `VITE_*` variables are read at build time. Redeploy the Vercel project after changing them. The committed `vercel.json` records the Vite build settings.
+
+#### Node backend settings
+
+Run the repository on a host that supports a persistent Node process and WebSockets:
+
+```bash
+npm ci
+npm run build
+NODE_ENV=production PORT=3000 FRONTEND_ORIGIN=https://your-app.vercel.app npm start
+```
+
+Set `FRONTEND_ORIGIN` to the exact Vercel origin without a trailing slash. It enables CORS for browser REST requests from the frontend. The backend must expose both HTTP and WebSocket traffic on the same public host and port, and must allow the upgrade path `/ws/well/OIL-ACTIVE-01`.
+
+For Docker-based hosting, `docker-compose up --build` uses the included `Dockerfile`; production infrastructure should provide the required environment values and persistent service dependencies as appropriate. The current simulator and in-memory document store remain process-local, matching the existing prototype behavior.
+
+#### Local versus production URL behavior
+
+When `VITE_API_BASE_URL` and `VITE_WS_BASE_URL` are empty or unset, the browser uses relative `/api/...` requests and the current page origin for WebSockets. This preserves `npm run dev` at `http://localhost:3000`. In the Vercel build, the two variables point the frontend at the separate Node backend.
+
+The WebSocket endpoint is supported by the selected production architecture because it runs on the separate long-lived Node backend. It is not supported by the Vercel frontend deployment itself.
+
+#### Deployment smoke test
+
+After deployment, verify:
+
+```text
+GET https://ertmac-api.example.com/health
+GET https://ertmac-api.example.com/api/wells
+GET https://ertmac-api.example.com/api/events
+GET https://ertmac-api.example.com/api/simulation/status
+GET https://ertmac-api.example.com/api/wells/nearby?radius_km=25&formation=ALL
+GET https://ertmac-api.example.com/api/wells/nearby?current_depth=2835&radius_km=25
+WebSocket wss://ertmac-api.example.com/ws/well/OIL-ACTIVE-01
+```
+
+The Vercel page should then load without API 404s, and the browser Network panel should show the WebSocket upgrade as successful.
+
 ---
 
 ## 8. Role-Based Access Controls (RBAC)
@@ -205,5 +255,6 @@ The header provides a role switcher simulating access levels across Oil India op
 ## 9. Disclaimer
 
 *All data included in this prototype has been realistically synthesized to reflect typical Upper Assam Basin geological and drilling conditions (Barail Main Sand, Girujan Clay, Tipam Sandstone). It is designed exclusively for demonstration and evaluation under Smart India Hackathon Problem Statement 26121.*
-#   S I H _ 2 6 1 2 1  
+#   S I H _ 2 6 1 2 1 
+ 
  

@@ -13,16 +13,20 @@ import {
   ActiveAlert,
 } from '../types/index.js';
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
+
 export const api = {
   async getWells(params?: { field?: string; status?: string }): Promise<{ count: number; wells: Well[] }> {
     const query = new URLSearchParams(params as Record<string, string>).toString();
-    const res = await fetch(`/api/wells${query ? `?${query}` : ''}`);
+    const res = await fetch(apiUrl(`/api/wells${query ? `?${query}` : ''}`));
     if (!res.ok) throw new Error('Failed to fetch wells');
     return res.json();
   },
 
   async getWellDetails(wellId: string): Promise<{ well: Well; events: HistoricalEvent[]; documents: TechnicalDocument[] }> {
-    const res = await fetch(`/api/wells/${wellId}`);
+    const res = await fetch(apiUrl(`/api/wells/${wellId}`));
     if (!res.ok) throw new Error('Failed to fetch well details');
     return res.json();
   },
@@ -46,7 +50,7 @@ export const api = {
     if (params?.radius_km) q.set('radius_km', String(params.radius_km));
     if (params?.formation) q.set('formation', params.formation);
 
-    const res = await fetch(`/api/wells/nearby?${q.toString()}`);
+    const res = await fetch(apiUrl(`/api/wells/nearby?${q.toString()}`));
     if (!res.ok) throw new Error('Failed to fetch nearby wells');
     return res.json();
   },
@@ -69,19 +73,19 @@ export const api = {
     if (params?.maxDepth) q.set('maxDepth', String(params.maxDepth));
     if (params?.search) q.set('search', params.search);
 
-    const res = await fetch(`/api/events?${q.toString()}`);
+    const res = await fetch(apiUrl(`/api/events?${q.toString()}`));
     if (!res.ok) throw new Error('Failed to fetch events');
     return res.json();
   },
 
   async getDocuments(): Promise<{ count: number; documents: TechnicalDocument[] }> {
-    const res = await fetch('/api/documents');
+    const res = await fetch(apiUrl('/api/documents'));
     if (!res.ok) throw new Error('Failed to fetch documents');
     return res.json();
   },
 
   async getDocumentDetails(docId: string): Promise<TechnicalDocument> {
-    const res = await fetch(`/api/documents/${docId}`);
+    const res = await fetch(apiUrl(`/api/documents/${docId}`));
     if (!res.ok) throw new Error('Failed to fetch document details');
     return res.json();
   },
@@ -93,7 +97,7 @@ export const api = {
     wellName: string;
     textContent?: string;
   }): Promise<{ success: boolean; document: TechnicalDocument }> {
-    const res = await fetch('/api/documents/upload', {
+    const res = await fetch(apiUrl('/api/documents/upload'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -103,7 +107,7 @@ export const api = {
   },
 
   async searchKnowledge(query: string): Promise<RagResponse> {
-    const res = await fetch('/api/knowledge/search', {
+    const res = await fetch(apiUrl('/api/knowledge/search'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -125,19 +129,19 @@ export const api = {
       hasHistoricalIncident: boolean;
     }[];
   }> {
-    const res = await fetch(`/api/risk/history/${wellId}`);
+    const res = await fetch(apiUrl(`/api/risk/history/${wellId}`));
     if (!res.ok) throw new Error('Failed to fetch risk history');
     return res.json();
   },
 
   async getSimulationStatus(): Promise<SimulationState> {
-    const res = await fetch('/api/simulation/status');
+    const res = await fetch(apiUrl('/api/simulation/status'));
     if (!res.ok) throw new Error('Failed to fetch simulation status');
     return res.json();
   },
 
   async startSimulation(demoMode = false, speed = 1.0): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/start', {
+    const res = await fetch(apiUrl('/api/simulation/start'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ demoMode, speed }),
@@ -147,7 +151,7 @@ export const api = {
   },
 
   async stopSimulation(): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/stop', {
+    const res = await fetch(apiUrl('/api/simulation/stop'), {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to stop simulation');
@@ -155,7 +159,7 @@ export const api = {
   },
 
   async fastForwardSimulation(): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/fast-forward', {
+    const res = await fetch(apiUrl('/api/simulation/fast-forward'), {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to fast forward simulation');
@@ -163,7 +167,7 @@ export const api = {
   },
 
   async stepSimulation(deltaM = 1.0): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/step', {
+    const res = await fetch(apiUrl('/api/simulation/step'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deltaM }),
@@ -173,7 +177,7 @@ export const api = {
   },
 
   async resetSimulation(startDepth = 2835.0): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/reset', {
+    const res = await fetch(apiUrl('/api/simulation/reset'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ startDepth }),
@@ -183,7 +187,7 @@ export const api = {
   },
 
   async pumpMitigation(pillType: string): Promise<{ success: boolean; state: SimulationState }> {
-    const res = await fetch('/api/simulation/mitigate', {
+    const res = await fetch(apiUrl('/api/simulation/mitigate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pillType }),
@@ -193,7 +197,7 @@ export const api = {
   },
 
   async acknowledgeAlert(alertId: string): Promise<{ success: boolean }> {
-    const res = await fetch(`/api/alerts/${alertId}`, {
+    const res = await fetch(apiUrl(`/api/alerts/${alertId}`), {
       method: 'PATCH',
     });
     if (!res.ok) throw new Error('Failed to acknowledge alert');
@@ -210,7 +214,7 @@ export const api = {
     formationHazardCounts: Record<string, number>;
     topMitigations: { name: string; successRate: string; frequency: number }[];
   }> {
-    const res = await fetch('/api/analytics/summary');
+    const res = await fetch(apiUrl('/api/analytics/summary'));
     if (!res.ok) throw new Error('Failed to fetch analytics summary');
     return res.json();
   },

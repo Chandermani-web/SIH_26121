@@ -57,6 +57,23 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  const frontendOrigin = process.env.FRONTEND_ORIGIN;
+  if (frontendOrigin) {
+    app.use((req, res, next) => {
+      const requestOrigin = req.headers.origin;
+      if (requestOrigin === frontendOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', frontendOrigin);
+        res.setHeader('Vary', 'Origin');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      }
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(requestOrigin === frontendOrigin ? 204 : 403);
+      }
+      next();
+    });
+  }
+
   // Request logger
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) {

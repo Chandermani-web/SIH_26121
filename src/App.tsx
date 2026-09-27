@@ -141,8 +141,9 @@ export default function App() {
 
   // WebSocket Connection
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/well/OIL-ACTIVE-01`;
+    const configuredWsBaseUrl = (import.meta.env.VITE_WS_BASE_URL || '').replace(/\/$/, '');
+    const defaultWsBaseUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+    const wsUrl = `${configuredWsBaseUrl || defaultWsBaseUrl}/ws/well/OIL-ACTIVE-01`;
 
     let reconnectTimer: NodeJS.Timeout;
 
