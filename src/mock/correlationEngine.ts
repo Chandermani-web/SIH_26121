@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Well, HistoricalEvent, WELLS_DATA, FORMATIONS_DATA } from '../data/wellsData.js';
-import { HISTORICAL_EVENTS_DATA } from '../data/eventsData.js';
+import { Well, HistoricalEvent, WELLS_DATA, FORMATIONS_DATA } from './wellsData.js';
+import { HISTORICAL_EVENTS_DATA } from './eventsData.js';
 
 export interface WellCorrelationResult {
   well: Well;

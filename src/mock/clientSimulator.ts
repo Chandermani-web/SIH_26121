@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { WebSocket } from 'ws';
 import { DrillingTelemetryParams, evaluateDrillingRisks, RiskPrediction } from './riskEngine.js';
 import { correlateNearbyWells, WellCorrelationResult } from './correlationEngine.js';
-import { EventSeverity } from '../data/wellsData.js';
+import { EventSeverity } from './wellsData.js';
 
 export interface ActiveAlert {
   id: string;
@@ -34,17 +33,17 @@ export interface SimulationState {
   wellId: string;
   isRunning: boolean;
   isDemoMode: boolean;
-  simulationSpeed: number; // multiplier
-  currentDepth: number; // m
-  tvd: number; // m
-  rop: number; // m/hr
-  wob: number; // klb
+  simulationSpeed: number;
+  currentDepth: number;
+  tvd: number;
+  rop: number;
+  wob: number;
   rpm: number;
-  torque: number; // kft-lb
-  spp: number; // psi
-  flowIn: number; // gpm
-  flowOut: number; // gpm
-  mudWeight: number; // ppg
+  torque: number;
+  spp: number;
+  flowIn: number;
+  flowOut: number;
+  mudWeight: number;
   pitVolumeBbl: number;
   pitVolumeChangeBbl: number;
   gasUnits: number;
@@ -57,10 +56,12 @@ export interface SimulationState {
   stepIndex: number;
 }
 
-class ErtmacSimulator {
+type TelemetryListener = (state: SimulationState) => void;
+
+class ClientErtmacSimulator {
   private state: SimulationState;
-  private intervalTimer: NodeJS.Timeout | null = null;
-  private connectedSockets: Set<WebSocket> = new Set();
+  private timer: any = null;
+  private listeners: Set<TelemetryListener> = new Set();
   private alertCounter = 1;
 
   constructor() {
@@ -91,22 +92,31 @@ class ErtmacSimulator {
       stepIndex: 0,
     };
 
-    // Initialize initial risks and correlations
     this.recomputeIntelligence();
-  }
-
-  public registerSocket(ws: WebSocket) {
-    this.connectedSockets.add(ws);
-    // Send immediate snapshot
-    ws.send(JSON.stringify({ type: 'SIMULATION_STATE', payload: this.state }));
-
-    ws.on('close', () => {
-      this.connectedSockets.delete(ws);
-    });
   }
 
   public getState(): SimulationState {
     return { ...this.state };
+  }
+
+  public subscribe(listener: TelemetryListener): () => void {
+    this.listeners.add(listener);
+    // Send immediate snapshot to subscriber
+    listener(this.getState());
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify() {
+    const snapshot = this.getState();
+    for (const listener of this.listeners) {
+      try {
+        listener(snapshot);
+      } catch (err) {
+        console.error('Error in telemetry listener:', err);
+      }
+    }
   }
 
   public startSimulation(demoMode = false, speed = 1.0) {
@@ -126,20 +136,18 @@ class ErtmacSimulator {
       this.state.pitVolumeBbl = 850.0;
       this.state.pitVolumeChangeBbl = 0;
       this.state.mitigationPillPumped = false;
-      // Clear previous alerts so demo alert fires cleanly
       this.state.activeAlerts = this.state.activeAlerts.filter((a) => a.alertType !== 'MUD_LOSS');
     }
 
-    if (this.intervalTimer) clearInterval(this.intervalTimer);
+    if (this.timer) clearInterval(this.timer);
 
-    // Run tick every 1000ms / speed
     const tickInterval = Math.max(200, Math.floor(1000 / speed));
-    this.intervalTimer = setInterval(() => {
+    this.timer = setInterval(() => {
       this.tick();
     }, tickInterval);
 
     this.recomputeIntelligence();
-    this.broadcast();
+    this.notify();
   }
 
   public fastForwardToIncident() {
@@ -148,16 +156,16 @@ class ErtmacSimulator {
     this.state.mitigationPillPumped = false;
     this.simulatePhysics();
     this.recomputeIntelligence();
-    this.broadcast();
+    this.notify();
   }
 
   public stopSimulation() {
     this.state.isRunning = false;
-    if (this.intervalTimer) {
-      clearInterval(this.intervalTimer);
-      this.intervalTimer = null;
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
-    this.broadcast();
+    this.notify();
   }
 
   public resetSimulation(startDepth = 2835.0) {
@@ -167,12 +175,13 @@ class ErtmacSimulator {
     this.state.torque = 14.8;
     this.state.flowIn = 560;
     this.state.flowOut = 560;
+    this.state.pitVolumeBbl = 850.0;
     this.state.pitVolumeChangeBbl = 0;
     this.state.activeAlerts = [];
     this.state.mitigationPillPumped = false;
     this.state.stepIndex = 0;
     this.recomputeIntelligence();
-    this.broadcast();
+    this.notify();
   }
 
   public stepDepth(deltaM = 1.0) {
@@ -180,18 +189,16 @@ class ErtmacSimulator {
     this.state.tvd = this.state.currentDepth * 0.991;
     this.simulatePhysics();
     this.recomputeIntelligence();
-    this.broadcast();
+    this.notify();
   }
 
   public pumpMitigationPill(pillType: string) {
     this.state.mitigationPillPumped = true;
-    // Remediate mud loss conditions
-    this.state.mudWeight = 9.85; // reduced mud weight
+    this.state.mudWeight = 9.85; // reduced mud weight to prevent overbalance
     this.state.flowOut = this.state.flowIn; // full returns restored
     this.state.pitVolumeChangeBbl = 0;
     this.state.torque = 14.2;
 
-    // Resolve or acknowledge active alerts
     for (const a of this.state.activeAlerts) {
       if (a.alertType === 'MUD_LOSS') {
         a.status = 'RESOLVED';
@@ -199,26 +206,27 @@ class ErtmacSimulator {
     }
 
     this.recomputeIntelligence();
-    this.broadcast({
-      type: 'NOTIFICATION',
-      payload: {
-        title: 'Mitigation Pill Successfully Deployed',
-        message: `Poured 45 bbl ${pillType}. Annular returns re-established at ${this.state.flowIn} gpm. Mud weight lowered to 9.85 ppg.`,
-        severity: 'SUCCESS',
-      },
-    });
+    this.notify();
+  }
+
+  public acknowledgeAlert(alertId: string) {
+    for (const a of this.state.activeAlerts) {
+      if (a.id === alertId) {
+        a.status = 'ACKNOWLEDGED';
+      }
+    }
+    this.notify();
   }
 
   private tick() {
     this.state.stepIndex += 1;
-    // Drilling advance rate adjusted for demo mode pace
     const advanceRate = this.state.isDemoMode ? 0.35 : 0.2;
     this.state.currentDepth = Math.round((this.state.currentDepth + advanceRate) * 10) / 10;
     this.state.tvd = Math.round(this.state.currentDepth * 0.991 * 10) / 10;
 
     this.simulatePhysics();
     this.recomputeIntelligence();
-    this.broadcast();
+    this.notify();
   }
 
   private simulatePhysics() {
@@ -233,85 +241,55 @@ class ErtmacSimulator {
 
     // Scenario 1: Approaching 2840m - 2843m (Pre-loss warning zone)
     if (depth >= 2840.0 && depth < 2844.5 && !this.state.mitigationPillPumped) {
-      // Torque increases as bit encounters carbonaceous shale / fracture boundaries
       this.state.torque = 19.5 + Math.random() * 4.0;
-      this.state.rop = 22.0 + Math.random() * 5.0; // Drilling break
-      this.state.flowOut = this.state.flowIn - 15; // Initial seepage loss
+      this.state.rop = 22.0 + Math.random() * 5.0;
+      this.state.flowOut = this.state.flowIn - 15; // 15 gpm seepage
       this.state.pitVolumeChangeBbl -= 1.2;
     }
     // Scenario 2: Critical 2844.5m - 2852m (Mirrors NHK-142 total loss)
     else if (depth >= 2844.5 && depth < 2852.0 && !this.state.mitigationPillPumped) {
       this.state.torque = 24.5 + Math.random() * 4.5;
       this.state.rop = 28.5 + Math.random() * 4.0;
-      this.state.flowOut = 440; // 120 gpm deficit!
+      this.state.flowOut = 440; // 120 gpm loss deficit
       this.state.pitVolumeChangeBbl -= 4.5;
       this.state.pitVolumeBbl = Math.max(720, this.state.pitVolumeBbl - 2.5);
 
-      // Trigger Alert if not already triggered
-      if (!this.state.activeAlerts.some((a) => a.alertType === 'MUD_LOSS' && a.status === 'ACTIVE')) {
+      // Trigger Proactive Alert
+      const existing = this.state.activeAlerts.find((a) => a.alertType === 'MUD_LOSS');
+      if (!existing) {
         const newAlert: ActiveAlert = {
-          id: `ALT-${this.alertCounter++}`,
-          wellId: this.state.wellId,
+          id: `ALT-MUDLOSS-${Date.now()}-${this.alertCounter++}`,
+          wellId: 'OIL-ACTIVE-01',
           wellName: 'NHK-Deep-504 (Active)',
           alertType: 'MUD_LOSS',
           severity: 'CRITICAL',
-          depth: this.state.currentDepth,
+          depth: Math.round(depth * 10) / 10,
           timestamp: new Date().toISOString(),
-          title: 'PROACTIVE ALERT: Severe Lost Circulation Zone',
+          title: 'CRITICAL: Severe Lost Circulation Horizon Detected',
           message:
-            'Critical historical correlation: Offset Well NHK-142 (2.3 km away) suffered total mud loss (68 bbls in 12 min) at 2845m in Barail Main Sand. Active flow deficit detected (-120 gpm).',
+            'Flow line return deficit (-120 gpm) and torque oscillations observed at 2844.5m. Direct stratigraphic correlation with offset well NHK-142 (2.3 km away) where total loss of returns occurred at 2845.0m.',
           evidence: {
-            historicalWells: ['NHK-142 (2.3 km)', 'BBL-14 (1.8 km)', 'JRN-17 (5.5 km)'],
-            historicalDepths: [2845.0, 2842.0, 2846.5],
+            historicalWells: ['NHK-142', 'JRN-17', 'BBL-14'],
+            historicalDepths: [2845.0, 2846.5, 2842.0],
             formation: 'Barail Main Sand (BMS)',
             distanceKm: 2.3,
-            sourceDoc: 'Well Completion Report NHK-142',
+            sourceDoc: 'Well Completion Report WCR-NHK-142',
             page: 42,
           },
           recommendedMitigation:
-            'Prepare to pull off bottom into 9-5/8" casing shoe. Pump 45 bbl engineered LCM squeeze pill (25 ppb coarse CaCO3 + 15 ppb coarse Mica + 10 ppb walnut shells). Lower mud weight to 9.85 ppg.',
+            'Stage 45 bbl engineered LCM pill (25 ppb coarse CaCO3 + 15 ppb coarse Mica + 10 ppb walnut shells). Lower mud weight to 9.85 ppg to eliminate 420 psi overbalance.',
           status: 'ACTIVE',
         };
-        this.state.activeAlerts.unshift(newAlert);
+
+        this.state.activeAlerts = [newAlert, ...this.state.activeAlerts];
       }
     }
-    // Scenario 3: Passing 2855m - 2862m (Differential sticking alert like KNG-38)
-    else if (depth >= 2856.0 && depth <= 2864.0) {
-      if (this.state.mitigationPillPumped) {
-        this.state.torque = 15.2 + Math.random() * 1.5;
-        this.state.flowOut = this.state.flowIn;
-      }
-      if (!this.state.activeAlerts.some((a) => a.alertType === 'STUCK_PIPE' && a.status === 'ACTIVE')) {
-        const stickAlert: ActiveAlert = {
-          id: `ALT-${this.alertCounter++}`,
-          wellId: this.state.wellId,
-          wellName: 'NHK-Deep-504 (Active)',
-          alertType: 'STUCK_PIPE',
-          severity: 'HIGH',
-          depth: this.state.currentDepth,
-          timestamp: new Date().toISOString(),
-          title: 'PREVENTATIVE ADVISORY: High Differential Sticking Horizon',
-          message:
-            'Entering permeable depleted Barail Sandstone horizon. Offset Well KNG-38 (4.1 km) stuck differentially at 2860m when left stationary for 35 minutes.',
-          evidence: {
-            historicalWells: ['KNG-38 (4.1 km)'],
-            historicalDepths: [2860.0],
-            formation: 'Barail Main Sand (BMS)',
-            distanceKm: 4.1,
-            sourceDoc: 'Daily Drilling Incident Log KNG-38',
-            page: 18,
-          },
-          recommendedMitigation:
-            'Enforce rule: Never keep string stationary for > 10 min without rotation (min 25 RPM). Maintain low filtration loss (< 8 cc). Spotting fluid on standby.',
-          status: 'ACTIVE',
-        };
-        this.state.activeAlerts.unshift(stickAlert);
-      }
-    }
-    // Scenario 4: Normal drilling
-    else {
-      this.state.torque = 14.5 + Math.random() * 1.5;
+    // Scenario 3: After mitigation pill deployed or normal zone
+    else if (this.state.mitigationPillPumped) {
+      this.state.torque = 14.8 + Math.random() * 1.5;
       this.state.flowOut = this.state.flowIn;
+      this.state.pitVolumeChangeBbl = 0;
+      this.state.mudWeight = 9.85;
     }
   }
 
@@ -335,40 +313,14 @@ class ErtmacSimulator {
     this.state.latestRisks = riskEvaluation.risks;
     this.state.overallRiskLevel = riskEvaluation.overallRiskLevel;
 
-    // Recompute top correlations
+    // Offset correlations
     this.state.topCorrelations = correlateNearbyWells({
       activeLatitude: 27.2942,
       activeLongitude: 95.3418,
       currentDepth: this.state.currentDepth,
       radiusKm: 25,
-    }).slice(0, 8);
-  }
-
-  public acknowledgeAlert(alertId: string) {
-    const alert = this.state.activeAlerts.find((a) => a.id === alertId);
-    if (alert) {
-      alert.status = 'ACKNOWLEDGED';
-      this.broadcast();
-    }
-  }
-
-  private broadcast(customMsg?: Record<string, unknown>) {
-    const payload = customMsg || {
-      type: 'SIMULATION_STATE',
-      payload: this.state,
-    };
-    const jsonStr = JSON.stringify(payload);
-
-    for (const ws of this.connectedSockets) {
-      if (ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(jsonStr);
-        } catch {
-          this.connectedSockets.delete(ws);
-        }
-      }
-    }
+    });
   }
 }
 
-export const ertmacSimulator = new ErtmacSimulator();
+export const clientSimulator = new ClientErtmacSimulator();

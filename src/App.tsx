@@ -18,6 +18,7 @@ import { AnalyticsView } from './components/AnalyticsView.js';
 import { AlertsModal } from './components/AlertsModal.js';
 import { WellDetailModal } from './components/WellDetailModal.js';
 import { api } from './services/apiService.js';
+import { clientSimulator } from './mock/clientSimulator.js';
 import {
   SimulationState,
   Well,
@@ -99,11 +100,9 @@ export default function App() {
   const [eventsTypeFilter, setEventsTypeFilter] = useState<string>('ALL');
   const [eventsFormationFilter, setEventsFormationFilter] = useState<string>('ALL');
 
-  const wsRef = useRef<WebSocket | null>(null);
-
-  // Initialize data from API
+  // Initialize data from mock store on mount
   useEffect(() => {
-    // 1. Fetch initial wells and formations
+    // 1. Fetch initial wells
     api.getWells().then((data) => {
       setWells(data.wells);
       const active = data.wells.find((w) => w.isSimulatedActive);
@@ -119,14 +118,9 @@ export default function App() {
     api.getNearbyWells({ radius_km: radiusKm, formation: formationFilter }).then((res) => {
       setNearbyResults(res.results);
     });
-
-    // 4. Fetch initial simulation status
-    api.getSimulationStatus().then((state) => {
-      setSimState(state);
-    });
   }, []);
 
-  // Update nearby wells whenever radius or formation filter changes
+  // Update nearby correlations when radius, formation, or depth changes
   useEffect(() => {
     api
       .getNearbyWells({
@@ -139,84 +133,16 @@ export default function App() {
       });
   }, [radiusKm, formationFilter, Math.round(simState.currentDepth / 10)]);
 
-  // WebSocket Connection
+  // Subscribe to live client simulator telemetry updates (Pure in-browser engine)
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/well/OIL-ACTIVE-01`;
-
-    let reconnectTimer: NodeJS.Timeout;
-
-    const connectWebSocket = () => {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        // Connected to eRTMAC telemetry feed
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          const state =
-            message.payload ||
-            message.data ||
-            (message.type === 'SIMULATION_STATE' ? message.payload : null);
-
-          if (state && typeof state === 'object' && 'currentDepth' in state) {
-            setSimState(state);
-            // Check for unacknowledged critical alerts in demo mode
-            if (state.activeAlerts && state.activeAlerts.length > 0) {
-              const hasCritical = state.activeAlerts.some(
-                (a: any) => a.severity === 'CRITICAL' && a.status === 'ACTIVE'
-              );
-              // In demo mode or live, notify or open
-            }
-          } else if (message.type === 'ALERT_TRIGGERED') {
-            const newAlert = message.data;
-            setSimState((prev) => ({
-              ...prev,
-              activeAlerts: [newAlert, ...prev.activeAlerts.filter((a) => a.id !== newAlert.id)],
-            }));
-            if (newAlert.severity === 'CRITICAL') {
-              setIsAlertsModalOpen(true);
-            }
-          }
-        } catch (err) {
-          console.error('Error parsing WS message:', err);
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimer = setTimeout(connectWebSocket, 3000);
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
-    };
-
-    connectWebSocket();
+    const unsubscribe = clientSimulator.subscribe((state) => {
+      setSimState(state);
+    });
 
     return () => {
-      clearTimeout(reconnectTimer);
-      if (wsRef.current) wsRef.current.close();
+      unsubscribe();
     };
   }, []);
-
-  // Polling fallback while simulation is running to guarantee 100% smooth telemetry updates
-  useEffect(() => {
-    if (!simState.isRunning) return;
-    const interval = setInterval(() => {
-      api
-        .getSimulationStatus()
-        .then((state) => {
-          setSimState(state);
-        })
-        .catch(() => {});
-    }, 700);
-
-    return () => clearInterval(interval);
-  }, [simState.isRunning]);
 
   // Unified Cross-Navigation Handler
   const handleNavigateTab = (tab: string, context?: any) => {

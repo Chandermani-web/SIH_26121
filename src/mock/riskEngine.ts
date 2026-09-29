@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { EventSeverity, HistoricalEvent } from '../data/wellsData.js';
-import { HISTORICAL_EVENTS_DATA } from '../data/eventsData.js';
+import { EventSeverity, HistoricalEvent } from './wellsData.js';
+import { HISTORICAL_EVENTS_DATA } from './eventsData.js';
 import { getFormationForDepth } from './correlationEngine.js';
 
 export interface RiskPredictionFactor {
